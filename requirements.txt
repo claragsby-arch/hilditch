@@ -1,0 +1,6 @@
+PySide6
+pandas
+openpyxl
+deep-translator
+tqdm
+pyinstaller
