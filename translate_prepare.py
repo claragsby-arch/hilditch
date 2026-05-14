@@ -155,7 +155,7 @@ def preparer_et_traduire_excel(fichier_entree, fichier_sortie, progress_callback
     df.columns = [str(c).strip() for c in df.columns]
 
     
-    cols_a_combiner = ['ID','Designation', 'Marque', 'Modèle']
+    cols_a_combiner = ['Designation', 'Marque', 'Modèle']
     
     # Vérification que les colonnes existent avant de combiner
     for c in cols_a_combiner:
