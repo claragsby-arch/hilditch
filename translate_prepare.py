@@ -167,8 +167,7 @@ def preparer_et_traduire_excel(fichier_entree, fichier_sortie, progress_callback
                 print(error_msg)
             return
 
-    df['Name'] = (df['ID'].astype(str).replace('nan', '') + " " + 
-                df['Designation'].astype(str).replace('nan', '') + " " + 
+    df['Name'] = (df['Designation'].astype(str).replace('nan', '') + " " + 
                 df['Marque'].astype(str).replace('nan', '') + " " + 
                 df['Modèle'].astype(str).replace('nan', ''))
     
