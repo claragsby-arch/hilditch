@@ -141,7 +141,7 @@ def process_column_parallel(col_name, valeurs_uniques, progress_callback=None, b
     
     return traductions
 
-def preparer_et_traduire_excel(fichier_entree, fichier_sortie, progress_callback=None):
+def preparer_et_traduire_excel(fichier_entree, fichier_sortie, progress_callback=None, save_xlsx=True, include_provenance=True):
     # Charger le cache au début
     load_translation_cache()
     
@@ -171,8 +171,10 @@ def preparer_et_traduire_excel(fichier_entree, fichier_sortie, progress_callback
                 df['Marque'].astype(str).replace('nan', '') + " " + 
                 df['Modèle'].astype(str).replace('nan', ''))
     
-    
-    colonnes_finales = ['ID','Provenance', 'SN', 'Name', 'Commentaires','YOM']
+    if include_provenance:
+        colonnes_finales = ['ID', 'Provenance', 'SN', 'Name', 'Commentaires', 'YOM']
+    else:
+        colonnes_finales = ['ID', 'SN', 'Name', 'Commentaires', 'YOM']
     df = df[colonnes_finales]
     
     # Traduction avec optimisation
@@ -230,10 +232,14 @@ def preparer_et_traduire_excel(fichier_entree, fichier_sortie, progress_callback
             df[col] = df[col].astype(str).map(traductions_results[col]).fillna(df[col])
 
     # Renommer les colonnes pour l'export final
-    df.rename(columns={'ID':"Asset ID",'SN': 'Serial  number', 'Commentaires': 'Designation'}, inplace=True)
+    df.rename(columns={'SN': 'Serial  number', 'Commentaires': 'Designation'}, inplace=True)
 
-    df.to_excel(fichier_sortie, index=False)
-    success_msg = f"Terminé ! Sauvegardé sous : {fichier_sortie}"
+    if save_xlsx:
+        df.to_excel(fichier_sortie, index=False)
+        success_msg = f"Terminé ! Sauvegardé sous : {fichier_sortie}"
+    else:
+        success_msg = "Terminé ! Fichier XLSX non généré." 
+
     if progress_callback:
         progress_callback(success_msg)
     else:
@@ -245,13 +251,17 @@ def preparer_et_traduire_excel(fichier_entree, fichier_sortie, progress_callback
     return df
 
 
-def import_format_csv(fichier_excel,nom_fichier_csv="resultat.csv", progress_callback=None):
+def import_format_csv(fichier_excel=None, nom_fichier_csv="resultat.csv", progress_callback=None, df=None):
     if progress_callback:
-        progress_callback("Importation du fichier Excel et conversion en CSV...")
+        progress_callback("Importation et conversion en CSV...")
     else:
-        print("Importation du fichier Excel et conversion en CSV...")
+        print("Importation et conversion en CSV...")
 
-    df = pd.read_excel(fichier_excel)
+    if df is None:
+        if fichier_excel is None:
+            raise ValueError("Veuillez fournir le chemin du fichier Excel ou un DataFrame.")
+        df = pd.read_excel(fichier_excel)
+
     df.to_csv(nom_fichier_csv, index=False, encoding='utf-8-sig')
 
     success_msg = f"Le fichier CSV '{nom_fichier_csv}' a été créé avec succès."

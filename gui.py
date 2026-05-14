@@ -21,11 +21,12 @@ class ProcessWorker(QThread):
     progress_update = Signal(int, str)  # percentage, time_remaining
     finished = Signal(bool)
     
-    def __init__(self, file_path, numero_vente, create_xlsx=True):
+    def __init__(self, file_path, numero_vente, create_xlsx=True, include_provenance=True):
         super().__init__()
         self.file_path = file_path
         self.numero_vente = numero_vente
         self.create_xlsx = create_xlsx
+        self.include_provenance = include_provenance
         self.start_time = None
     
     def run(self):
@@ -56,7 +57,8 @@ class ProcessWorker(QThread):
                 self.file_path,
                 fichier_sortie_excel,
                 progress_callback,
-                save_xlsx=self.create_xlsx
+                save_xlsx=self.create_xlsx,
+                include_provenance=self.include_provenance
             )
             
             # Conversion en CSV (100%)
@@ -159,10 +161,18 @@ class MainWindow(QMainWindow):
         # Option de génération XLSX
         xlsx_option_layout = QHBoxLayout()
         self.xlsx_checkbox = QCheckBox("Créer le fichier XLSX")
-        self.xlsx_checkbox.setChecked(True)
+        self.xlsx_checkbox.setChecked(False)
         xlsx_option_layout.addWidget(self.xlsx_checkbox)
         xlsx_option_layout.addStretch()
         main_layout.addLayout(xlsx_option_layout)
+
+        # Option colonne Provenance
+        provenance_option_layout = QHBoxLayout()
+        self.provenance_checkbox = QCheckBox("Inclure la colonne Provenance")
+        self.provenance_checkbox.setChecked(False)
+        provenance_option_layout.addWidget(self.provenance_checkbox)
+        provenance_option_layout.addStretch()
+        main_layout.addLayout(provenance_option_layout)
 
         # Processing options
         options_label = QLabel("Actions:")
@@ -233,7 +243,12 @@ class MainWindow(QMainWindow):
         self.output_text.append("Démarrage du traitement...\n")
         
         # Create and start worker thread
-        self.worker = ProcessWorker(file_path, numero_vente, self.xlsx_checkbox.isChecked())
+        self.worker = ProcessWorker(
+            file_path,
+            numero_vente,
+            self.xlsx_checkbox.isChecked(),
+            self.provenance_checkbox.isChecked()
+        )
         self.worker.progress.connect(self.output_text.append)
         self.worker.progress_update.connect(self.update_progress)
         self.worker.finished.connect(self.on_processing_finished)
