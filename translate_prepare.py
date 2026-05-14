@@ -229,6 +229,9 @@ def preparer_et_traduire_excel(fichier_entree, fichier_sortie, progress_callback
         if col in traductions_results:
             df[col] = df[col].astype(str).map(traductions_results[col]).fillna(df[col])
 
+    # Renommer les colonnes pour l'export final
+    df.rename(columns={'ID':"Asset ID",'SN': 'Serial  number', 'Commentaires': 'Designation'}, inplace=True)
+
     df.to_excel(fichier_sortie, index=False)
     success_msg = f"Terminé ! Sauvegardé sous : {fichier_sortie}"
     if progress_callback:

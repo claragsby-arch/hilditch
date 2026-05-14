@@ -3,7 +3,8 @@ import os
 from pathlib import Path
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QPushButton, QLabel, QLineEdit, QTextEdit, QFileDialog, QProgressBar
+    QPushButton, QLabel, QLineEdit, QTextEdit, QFileDialog, QProgressBar,
+    QCheckBox
 )
 from PySide6.QtCore import Qt, QThread, Signal
 from datetime import datetime, timedelta
@@ -20,10 +21,11 @@ class ProcessWorker(QThread):
     progress_update = Signal(int, str)  # percentage, time_remaining
     finished = Signal(bool)
     
-    def __init__(self, file_path, numero_vente):
+    def __init__(self, file_path, numero_vente, create_xlsx=True):
         super().__init__()
         self.file_path = file_path
         self.numero_vente = numero_vente
+        self.create_xlsx = create_xlsx
         self.start_time = None
     
     def run(self):
@@ -50,13 +52,27 @@ class ProcessWorker(QThread):
                     except:
                         pass
             
-            preparer_et_traduire_excel(self.file_path, fichier_sortie_excel, progress_callback)
+            result_df = preparer_et_traduire_excel(
+                self.file_path,
+                fichier_sortie_excel,
+                progress_callback,
+                save_xlsx=self.create_xlsx
+            )
             
             # Conversion en CSV (100%)
-            self.progress.emit("Conversion en CSV...\n")
-            fichier_sortie_csv = f"{self.numero_vente}_CSV.csv"
-            import_format_csv(fichier_sortie_excel, fichier_sortie_csv, progress_callback)
+            if self.create_xlsx:
+                self.progress.emit("Conversion en CSV...\n")
+                fichier_sortie_csv = f"{self.numero_vente}_CSV.csv"
+                import_format_csv(fichier_sortie_excel, fichier_sortie_csv, progress_callback)
+            else:
+                self.progress.emit("Conversion en CSV sans création XLSX...\n")
+                fichier_sortie_csv = f"{self.numero_vente}_CSV.csv"
+                import_format_csv(nom_fichier_csv=fichier_sortie_csv, progress_callback=progress_callback, df=result_df)
             self._update_progress(100)
+            
+            self.progress.emit(f"\n✓ Terminé avec succès !\n")
+            self.progress.emit(f"  - Excel: {fichier_sortie_excel if self.create_xlsx else 'non créé'}\n")
+            self.progress.emit(f"  - CSV: {fichier_sortie_csv}\n")
             
             self.progress.emit(f"\n✓ Terminé avec succès !\n")
             self.progress.emit(f"  - Excel: {fichier_sortie_excel}\n")
@@ -140,6 +156,14 @@ class MainWindow(QMainWindow):
         numero_layout.addWidget(self.numero_input)
         main_layout.addLayout(numero_layout)
 
+        # Option de génération XLSX
+        xlsx_option_layout = QHBoxLayout()
+        self.xlsx_checkbox = QCheckBox("Créer le fichier XLSX")
+        self.xlsx_checkbox.setChecked(True)
+        xlsx_option_layout.addWidget(self.xlsx_checkbox)
+        xlsx_option_layout.addStretch()
+        main_layout.addLayout(xlsx_option_layout)
+
         # Processing options
         options_label = QLabel("Actions:")
         options_font = QFont()
@@ -209,7 +233,7 @@ class MainWindow(QMainWindow):
         self.output_text.append("Démarrage du traitement...\n")
         
         # Create and start worker thread
-        self.worker = ProcessWorker(file_path, numero_vente)
+        self.worker = ProcessWorker(file_path, numero_vente, self.xlsx_checkbox.isChecked())
         self.worker.progress.connect(self.output_text.append)
         self.worker.progress_update.connect(self.update_progress)
         self.worker.finished.connect(self.on_processing_finished)
